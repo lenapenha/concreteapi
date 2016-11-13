@@ -12,6 +12,16 @@ import javax.persistence.Table;
 @Table
 public class Phone {
 	
+	public Phone() {
+		super();
+	}
+	
+	public Phone(String ddd, String number) {
+		super();
+		this.ddd = ddd;
+		this.number = number;
+	}
+	
 	@Id
 	@Column(name = "id")
 	@GeneratedValue(strategy=GenerationType.AUTO)
