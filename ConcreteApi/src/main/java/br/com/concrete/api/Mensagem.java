@@ -7,6 +7,7 @@ public class Mensagem {
 	public static final String EMAIL_EXISTE = "E-mail já existente"; 
 	public static final String SUCESSO = "Usuário cadastrado com sucesso";
 	public static final String INVALIDO = "Usuário e/ou senha inválidos";
+	public static final String NAO_AUTORIZADO = "Não autorizado";
 	
 	private String mensagem;
 	private String codigo;

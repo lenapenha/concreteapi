@@ -5,8 +5,10 @@ import java.util.Date;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -31,6 +33,12 @@ public class UserController {
 	@RequestMapping(value="/edicao", method = RequestMethod.POST)
 	public ResponseEntity<String> edicao(@RequestBody User user){
 		ResponseEntity<String>  re = userDao.updateUser(user);
+		return re;
+	}
+	
+	@RequestMapping(value="/perfil")
+	public ResponseEntity<String> perfil(@RequestHeader(value="token") String token, @RequestParam("id") Long id){
+		ResponseEntity<String>  re = userDao.perfil(id, token);
 		return re;
 	}
 }

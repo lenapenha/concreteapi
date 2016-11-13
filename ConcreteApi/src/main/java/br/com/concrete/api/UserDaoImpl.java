@@ -1,12 +1,17 @@
 package br.com.concrete.api;
 
+import java.security.Key;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.List;
 
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.springframework.http.HttpStatus;
@@ -16,6 +21,7 @@ import org.springframework.stereotype.Service;
 import com.google.gson.Gson;
 
 import br.com.concrete.util.HibernateUtil;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 
@@ -84,9 +90,16 @@ public class UserDaoImpl implements UserDao{
 				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.UNAUTHORIZED);
 			}
 			
-			user = new User(userRtn);
 			//TODO retornar TOKEN
+			String token = getToken(user.getId()+":"+user.getName());
+			
+			user = new User(userRtn);
+			user.setToken(token);
+			
+			String tokenHs = getHash(token);
+			userRtn.setToken(tokenHs);
 			userRtn.setLastLogin(new Date());
+			
 			session.update(userRtn);
 			tx.commit();
 			
@@ -139,6 +152,49 @@ public class UserDaoImpl implements UserDao{
 
 		return new ResponseEntity<String>(userStr, HttpStatus.ACCEPTED);
 	}
+	
+	@Override
+	public ResponseEntity<String> perfil(Long id, String token) {
+		
+		Mensagem mensagem = new Mensagem();
+		Session session = HibernateUtil.getSessionFactory().openSession();
+		Transaction tx = null;
+		User userRtn;
+		
+		try {
+			tx = session.beginTransaction();
+
+			userRtn = getUserById(id, session);
+//			if(userRtn == null){ //mudar para se token nao existe
+//				mensagem.setMensagem(Mensagem.INVALIDO);
+//				mensagem.setCodigo(HttpStatus.BAD_REQUEST.toString());
+//				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.BAD_REQUEST);
+//			}
+			
+			String tokenHs = getHash(token);
+			
+			if(!userRtn.getToken().equals(tokenHs)){
+				mensagem.setMensagem(Mensagem.NAO_AUTORIZADO);
+				mensagem.setCodigo(HttpStatus.UNAUTHORIZED.toString());
+				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.UNAUTHORIZED);
+			}
+			
+		} catch (Exception e) {
+		     throw e;
+		}finally {
+			session.close();
+		}
+		
+		userRtn.setName(null);
+		userRtn.setEmail(null);
+		userRtn.setPassword(null);
+		userRtn.setToken(null);
+		
+		Gson gson = new Gson();
+		String userStr = gson.toJson(userRtn);
+		
+		return new ResponseEntity<String>(userStr, HttpStatus.ACCEPTED);
+	}
 
 	@Override
 	public void removeUser(int id) {
@@ -176,19 +232,42 @@ public class UserDaoImpl implements UserDao{
 		return hash;
 	}
 	
-	private String getToken(){
+	private String getToken(String sub){
+		long nowMillis = System.currentTimeMillis();
+		Date now = new Date(nowMillis);
+		SecretKey secretKey = null;
+		try {
+			secretKey = KeyGenerator.getInstance("AES").generateKey();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		// get base64 encoded version of the key
+		String encodedKey = Base64.encodeBase64String(	secretKey.getEncoded());
+
 		String compactJws = Jwts.builder()
-				.setIssuer("concreteApi")
-				.setSubject("Joe")
-				.signWith(SignatureAlgorithm.HS512, key)
+				.setSubject(sub)
+				.setIssuedAt(now)
+				.signWith(SignatureAlgorithm.HS256, encodedKey)
 				.compact();
+		
+		return compactJws;
 	}
 
 	
 	
-	//Sample method to construct a JWT
+	//Sample method to construct a JWT 
 	private String createJWT(String id, String issuer, String subject, long ttlMillis) {
-
+		// create new key
+		SecretKey secretKey = null;
+		try {
+		secretKey = KeyGenerator.getInstance("AES").generateKey();
+		} catch (NoSuchAlgorithmException e) {
+		e.printStackTrace();
+		}
+		// get base64 encoded version of the key
+		String encodedKey = Base64.encodeBase64String(	secretKey.getEncoded());
+		
+		
 	    //The JWT signature algorithm we will be using to sign the token
 	    SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
 
@@ -196,7 +275,7 @@ public class UserDaoImpl implements UserDao{
 	    Date now = new Date(nowMillis);
 
 	    //We will sign our JWT with our ApiKey secret
-	    byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(apiKey.getSecret());
+	    byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(encodedKey);
 	    Key signingKey = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
 
 	    //Let's set the JWT Claims
