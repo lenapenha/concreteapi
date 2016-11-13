@@ -1,15 +1,11 @@
 package br.com.concrete.api;
 
-import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
-import java.util.List;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import javax.xml.bind.DatatypeConverter;
 
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.hibernate.Session;
@@ -21,22 +17,21 @@ import org.springframework.stereotype.Service;
 import com.google.gson.Gson;
 
 import br.com.concrete.util.HibernateUtil;
-import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 
 @Service
 public class UserDaoImpl implements UserDao{
-	
+
 	@Override
 	public ResponseEntity<String> addUser(User user) {
 		String userStr;
-		
+
 		Session session = HibernateUtil.getSessionFactory().openSession();
 		Transaction tx = null;
 		try {
 			tx = session.beginTransaction();
-			
+
 			if (getUserByEmail(user.getEmail(), session) != null) {
 				Mensagem mensagem = new Mensagem();
 				mensagem.setMensagem(Mensagem.EMAIL_EXISTE);
@@ -48,76 +43,76 @@ public class UserDaoImpl implements UserDao{
 				tx.commit();
 			}
 			
+			//retorna usuario somente com informacoes necessarias			
 			user.setName(null);
 			user.setEmail(null);
 			user.setPassword(null);
-			
+
 			Gson gson = new Gson();
 			userStr = gson.toJson(user);
-			
-			
+
 		} catch (Exception e) {
 			if (tx!=null) tx.rollback();
-		     throw e;
+			throw e;
 		}finally {
 			session.close();
 		}
-		
+
 		return new ResponseEntity<String>(userStr, HttpStatus.ACCEPTED);
 	}
-	
+
 	@Override
 	public ResponseEntity<String> login(User user) {
 		Mensagem mensagem = new Mensagem();
 		Session session = HibernateUtil.getSessionFactory().openSession();
 		Transaction tx = null;
-		
+
 		try {
 			tx = session.beginTransaction();
 
 			User userRtn = getUserByEmail(user.getEmail(), session);
+			
+			//usuario nao encontrado
 			if(userRtn == null){
 				mensagem.setMensagem(Mensagem.INVALIDO);
 				mensagem.setCodigo(HttpStatus.BAD_REQUEST.toString());
 				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.BAD_REQUEST);
 			}
 			
+			//validar password
 			String pwd = getHash(user.getPassword());
-			
 			if(!userRtn.getPassword().equals(pwd)){
 				mensagem.setMensagem(Mensagem.INVALIDO);
 				mensagem.setCodigo(HttpStatus.UNAUTHORIZED.toString());
 				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.UNAUTHORIZED);
 			}
-			
-			//TODO retornar TOKEN
+
 			String token = getToken(user.getId()+":"+user.getName());
-			
+
 			user = new User(userRtn);
 			user.setToken(token);
-			
+
 			String tokenHs = getHash(token);
 			userRtn.setToken(tokenHs);
 			userRtn.setLastLogin(new Date());
-			
+
 			session.update(userRtn);
 			tx.commit();
-			
+
 		} catch (Exception e) {
 			if (tx!=null) tx.rollback();
-		     throw e;
+			throw e;
 		}finally {
 			session.close();
 		}
-		
-		//TODO retornar TOKEN
+
 		user.setName(null);
 		user.setEmail(null);
 		user.setPassword(null);
-		
+
 		Gson gson = new Gson();
 		String userStr = gson.toJson(user);
-		
+
 		return new ResponseEntity<String>(userStr, HttpStatus.ACCEPTED);
 	}
 
@@ -128,14 +123,15 @@ public class UserDaoImpl implements UserDao{
 		Transaction tx = null;
 		try {
 			tx = session.beginTransaction();
-			
+
 			//seta o Usuario de retorno antes que a informacao de modificado seja alterado
 			User userRtn = getUserById(user.getId(), session);
-			
+
 			user.setModified(new Date());
 			session.update(user);
 			tx.commit();
-
+			
+			//retorna usuario somente com informacoes necessarias
 			userRtn.setName(null);
 			userRtn.setEmail(null);
 			userRtn.setPassword(null);
@@ -152,86 +148,88 @@ public class UserDaoImpl implements UserDao{
 
 		return new ResponseEntity<String>(userStr, HttpStatus.ACCEPTED);
 	}
-	
+
 	@Override
 	public ResponseEntity<String> perfil(Long id, String token) {
-		
+
 		Mensagem mensagem = new Mensagem();
 		Session session = HibernateUtil.getSessionFactory().openSession();
-		Transaction tx = null;
 		User userRtn;
-		
+
 		try {
-			tx = session.beginTransaction();
+			
+			if(token == null){ 
+				mensagem.setMensagem(Mensagem.NAO_AUTORIZADO);
+				mensagem.setCodigo(HttpStatus.UNAUTHORIZED.toString());
+				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.UNAUTHORIZED);
+			}
 
 			userRtn = getUserById(id, session);
-//			if(userRtn == null){ //mudar para se token nao existe
-//				mensagem.setMensagem(Mensagem.INVALIDO);
-//				mensagem.setCodigo(HttpStatus.BAD_REQUEST.toString());
-//				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.BAD_REQUEST);
-//			}
 			
+			//validar token
 			String tokenHs = getHash(token);
-			
 			if(!userRtn.getToken().equals(tokenHs)){
 				mensagem.setMensagem(Mensagem.NAO_AUTORIZADO);
 				mensagem.setCodigo(HttpStatus.UNAUTHORIZED.toString());
 				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.UNAUTHORIZED);
 			}
-			
+
+			//validar sessao
+			Long sessao = System.currentTimeMillis() - userRtn.getLastLogin().getTime(); 
+			int exp = (30*60)*1000;
+			if(sessao > exp){
+				mensagem.setMensagem(Mensagem.SESSAO_INVALIDA);
+				mensagem.setCodigo(HttpStatus.UNAUTHORIZED.toString());
+				return new ResponseEntity<String>(mensagem.getMensagemToString(mensagem), HttpStatus.UNAUTHORIZED);
+			}
+
 		} catch (Exception e) {
-		     throw e;
+			throw e;
 		}finally {
 			session.close();
 		}
 		
+		//retorna usuario somente com informacoes necessarias
 		userRtn.setName(null);
 		userRtn.setEmail(null);
 		userRtn.setPassword(null);
 		userRtn.setToken(null);
-		
+
 		Gson gson = new Gson();
 		String userStr = gson.toJson(userRtn);
-		
+
 		return new ResponseEntity<String>(userStr, HttpStatus.ACCEPTED);
 	}
 
-	@Override
-	public void removeUser(int id) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	
 	private User getUserByEmail(String email, Session session){
 		User user = (User) session.createQuery("from User u where u.email = :email")
 				.setParameter("email", email)
 				.uniqueResult();
-		
+
 		return user;
 	}
-	
+
 	private User getUserById(Long id, Session session){
 		User user = (User) session.createQuery("from User u where u.id = :id")
 				.setParameter("id", id)
 				.uniqueResult();
-		
+
 		return user;
 	}
-	
+
 	private String getHash(String str){
 		String hash = null;
 		try {
 			MessageDigest algorithm = MessageDigest.getInstance("MD5");
-	         byte messageDigest[] = algorithm.digest(str.getBytes("UTF-8"));
-	         hash = new String(messageDigest);
+			byte messageDigest[] = algorithm.digest(str.getBytes("UTF-8"));
+			hash = new String(messageDigest);
 		} catch (Exception e) {
 			// TODO: handle exception
 		}
-		 
+
 		return hash;
 	}
-	
+
 	private String getToken(String sub){
 		long nowMillis = System.currentTimeMillis();
 		Date now = new Date(nowMillis);
@@ -241,7 +239,6 @@ public class UserDaoImpl implements UserDao{
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
-		// get base64 encoded version of the key
 		String encodedKey = Base64.encodeBase64String(	secretKey.getEncoded());
 
 		String compactJws = Jwts.builder()
@@ -249,52 +246,8 @@ public class UserDaoImpl implements UserDao{
 				.setIssuedAt(now)
 				.signWith(SignatureAlgorithm.HS256, encodedKey)
 				.compact();
-		
+
 		return compactJws;
 	}
-
-	
-	
-	//Sample method to construct a JWT 
-	private String createJWT(String id, String issuer, String subject, long ttlMillis) {
-		// create new key
-		SecretKey secretKey = null;
-		try {
-		secretKey = KeyGenerator.getInstance("AES").generateKey();
-		} catch (NoSuchAlgorithmException e) {
-		e.printStackTrace();
-		}
-		// get base64 encoded version of the key
-		String encodedKey = Base64.encodeBase64String(	secretKey.getEncoded());
-		
-		
-	    //The JWT signature algorithm we will be using to sign the token
-	    SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
-
-	    long nowMillis = System.currentTimeMillis();
-	    Date now = new Date(nowMillis);
-
-	    //We will sign our JWT with our ApiKey secret
-	    byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(encodedKey);
-	    Key signingKey = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
-
-	    //Let's set the JWT Claims
-	    JwtBuilder builder = Jwts.builder().setId(id)
-	                                .setIssuedAt(now)
-	                                .setSubject(subject)
-	                                .setIssuer(issuer)
-	                                .signWith(signatureAlgorithm, signingKey);
-
-	    //if it has been specified, let's add the expiration
-	    if (ttlMillis >= 0) {
-	    long expMillis = nowMillis + ttlMillis;
-	        Date exp = new Date(expMillis);
-	        builder.setExpiration(exp);
-	    }
-
-	    //Builds the JWT and serializes it to a compact, URL-safe string
-	    return builder.compact();
-	}
-
 
 }

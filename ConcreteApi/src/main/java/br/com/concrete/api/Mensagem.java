@@ -8,6 +8,7 @@ public class Mensagem {
 	public static final String SUCESSO = "Usuário cadastrado com sucesso";
 	public static final String INVALIDO = "Usuário e/ou senha inválidos";
 	public static final String NAO_AUTORIZADO = "Não autorizado";
+	public static final String SESSAO_INVALIDA = "Sessão Inválida";
 	
 	private String mensagem;
 	private String codigo;

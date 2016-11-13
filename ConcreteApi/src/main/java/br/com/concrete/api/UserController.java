@@ -37,7 +37,7 @@ public class UserController {
 	}
 	
 	@RequestMapping(value="/perfil")
-	public ResponseEntity<String> perfil(@RequestHeader(value="token") String token, @RequestParam("id") Long id){
+	public ResponseEntity<String> perfil(@RequestHeader (value="token", required=false) String token, @RequestParam("id") Long id){
 		ResponseEntity<String>  re = userDao.perfil(id, token);
 		return re;
 	}
