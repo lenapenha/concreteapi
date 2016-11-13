@@ -40,6 +40,7 @@ public class UserDaoImpl implements UserDao{
 			}else{
 				user.setPassword(getHash(user.getPassword()));
 				session.save(user);
+				session.flush();
 				tx.commit();
 			}
 			
@@ -47,11 +48,13 @@ public class UserDaoImpl implements UserDao{
 			user.setName(null);
 			user.setEmail(null);
 			user.setPassword(null);
+			user.setPhones(null);
 
 			Gson gson = new Gson();
 			userStr = gson.toJson(user);
 
 		} catch (Exception e) {
+			e.printStackTrace();
 			if (tx!=null) tx.rollback();
 			throw e;
 		}finally {
@@ -109,6 +112,7 @@ public class UserDaoImpl implements UserDao{
 		user.setName(null);
 		user.setEmail(null);
 		user.setPassword(null);
+		user.setPhones(null);
 
 		Gson gson = new Gson();
 		String userStr = gson.toJson(user);
@@ -141,6 +145,7 @@ public class UserDaoImpl implements UserDao{
 
 		} catch (Exception e) {
 			if (tx!=null) tx.rollback();
+			e.printStackTrace();
 			throw e;
 		}finally {
 			session.close();
@@ -194,6 +199,7 @@ public class UserDaoImpl implements UserDao{
 		userRtn.setEmail(null);
 		userRtn.setPassword(null);
 		userRtn.setToken(null);
+		userRtn.setPhones(null);
 
 		Gson gson = new Gson();
 		String userStr = gson.toJson(userRtn);
@@ -224,7 +230,7 @@ public class UserDaoImpl implements UserDao{
 			byte messageDigest[] = algorithm.digest(str.getBytes("UTF-8"));
 			hash = new String(messageDigest);
 		} catch (Exception e) {
-			// TODO: handle exception
+			e.printStackTrace();
 		}
 
 		return hash;

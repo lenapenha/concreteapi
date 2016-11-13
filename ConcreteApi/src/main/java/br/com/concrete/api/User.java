@@ -1,18 +1,20 @@
 package br.com.concrete.api;
 
 import java.util.Date;
+import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 @Entity
 @Table
 public class User {
-	//TODO Lista de phones
 	
 	public User() {
 		super();
@@ -54,6 +56,9 @@ public class User {
 	
 	@Column(name = "token")
 	private String token;
+	
+	@OneToMany(mappedBy = "user", fetch= FetchType.EAGER)
+	private List<Phone> phones;
 	
 	public Long getId() {
 		return id;
@@ -102,6 +107,14 @@ public class User {
 	}
 	public void setToken(String token) {
 		this.token = token;
+	}
+
+	public List<Phone> getPhones() {
+		return phones;
+	}
+
+	public void setPhones(List<Phone> phones) {
+		this.phones = phones;
 	}
 	
 	

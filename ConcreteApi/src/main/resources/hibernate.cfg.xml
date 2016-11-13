@@ -12,6 +12,7 @@
     <property name="dialect">org.hibernate.dialect.HSQLDialect</property>
     <property name="hibernate.hbm2ddl.auto">create</property>
     
-    <mapping class="br.com.concrete.api.User"/>          
+    <mapping class="br.com.concrete.api.User"/>
+    <mapping class="br.com.concrete.api.Phone"/>             
    </session-factory>
 </hibernate-configuration> 
