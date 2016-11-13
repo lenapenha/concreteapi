@@ -1,0 +1,40 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.2.RELEASE")
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse-wtp'
+apply plugin: 'idea'
+apply plugin: 'spring-boot'
+
+jar {
+    baseName = 'myapp'
+    version =  '0.1.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+dependencies {
+    compile("org.springframework.boot:spring-boot-starter-web")
+    compile( "org.hsqldb:hsqldb")
+	compile group: 'org.hibernate', name: 'hibernate-gradle-plugin', version: '5.2.4.Final'
+	
+	compile 'org.hibernate:hibernate-core:4.3.6.Final'
+	compile 'javax.servlet:javax.servlet-api:3.1.0'
+	compile 'org.javassist:javassist:3.15.0-GA'
+	
+	compile group: 'com.google.code.gson', name: 'gson', version: '1.7.2'
+	compile 'io.jsonwebtoken:jjwt:0.7.0'
+	
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+}
