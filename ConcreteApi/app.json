@@ -1,5 +1,5 @@
 {
 	"name": "concreteapi",
-	"image" "heroku/gradle",
+	"image": "heroku/gradle",
 	"addons": ["heroku-hsqldb"]
 }
