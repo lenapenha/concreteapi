@@ -24,6 +24,10 @@ repositories {
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.14.1'
+}
+
 dependencies {
     compile("org.springframework.boot:spring-boot-starter-web")
     compile( "org.hsqldb:hsqldb")
