@@ -1,10 +1,11 @@
 import org.junit.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mockito.Mockito;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import br.com.concrete.api.Phone;
 import br.com.concrete.api.User;
-import br.com.concrete.api.UserService;
+import br.com.concrete.api.UserDao;
 
 import static org.junit.Assert.*;
 
@@ -19,9 +20,6 @@ import java.util.List;
  */
 public class LibraryTest {
 	
-	@Autowired(required = true)
-	private UserService userService;
-    
 	@Test 
     public void testSomeLibraryMethod() {
         Library classUnderTest = new Library();
@@ -30,7 +28,6 @@ public class LibraryTest {
 	
 	@Test
 	public void cadastroUserOK(){
-		
 		User user = new User();
 		
 		user.setName("João da Silva");
@@ -40,8 +37,112 @@ public class LibraryTest {
 		phones.add(new Phone("21", "987654321"));
 		user.setPhones(phones);
 		
-		ResponseEntity<String> re = userService.addUser(user);
+		ResponseEntity<String> reMock = new ResponseEntity<String>("{\"id\":1,\"created\":\"Nov 13, 2016 4:14:50 PM\"}", HttpStatus.ACCEPTED);
 		
-		assertEquals("{\"id\":1,\"created\":\"Nov 13, 2016 4:14:50 PM\"}", re.toString());
+		UserDao userDaoMock = Mockito.mock(UserDao.class);
+		Mockito.when(userDaoMock.addUser(user)).thenReturn(reMock);
+		
+		ResponseEntity<String> re = userDaoMock.addUser(user);
+		
+		
+		assertEquals(reMock.toString(), re.toString());
+	}
+	
+	@Test
+	public void emailExistente(){
+		User user = new User();
+		
+		user.setName("João da Silva");
+		user.setEmail("joao@silva.org");
+		user.setPassword("hunter2");
+		List<Phone> phones = new ArrayList<Phone>();
+		phones.add(new Phone("21", "987654321"));
+		user.setPhones(phones);
+		
+		ResponseEntity<String> reMock = new ResponseEntity<String>("{\"mensagem\":\"E-mail já existente\",\"codigo\":\"401\"}", HttpStatus.UNAUTHORIZED);
+		
+		UserDao userDaoMock = Mockito.mock(UserDao.class);
+		Mockito.when(userDaoMock.addUser(user)).thenReturn(reMock);
+		
+		ResponseEntity<String> re = userDaoMock.addUser(user);
+		
+		assertEquals(reMock.toString(), re.toString());
+	}
+	
+	@Test
+	public void usuarioNaoEncontrado(){
+		User user = new User();
+		
+		user.setEmail("joao@silva.or");
+		user.setPassword("hunter2");
+		
+		ResponseEntity<String> reMock = new ResponseEntity<String>("{\"mensagem\":\"Usuário e/ou senha inválidos\",\"codigo\":\"400\"}", HttpStatus.BAD_REQUEST);
+		
+		UserDao userDaoMock = Mockito.mock(UserDao.class);
+		Mockito.when(userDaoMock.login(user)).thenReturn(reMock);
+		
+		ResponseEntity<String> re = userDaoMock.login(user);
+		
+		assertEquals(reMock.toString(), re.toString());
+	}
+	
+	@Test
+	public void senhaInvalida(){
+		User user = new User();
+		
+		user.setEmail("joao@silva.org");
+		user.setPassword("hunter");
+		
+		ResponseEntity<String> reMock = new ResponseEntity<String>("{\"mensagem\":\"Usuário e/ou senha inválidos\",\"codigo\":\"401\"}", HttpStatus.UNAUTHORIZED);
+		
+		UserDao userDaoMock = Mockito.mock(UserDao.class);
+		Mockito.when(userDaoMock.login(user)).thenReturn(reMock);
+		
+		ResponseEntity<String> re = userDaoMock.login(user);
+		
+		assertEquals(reMock.toString(), re.toString());
+	}
+	
+	@Test
+	public void loginOk(){
+		User user = new User();
+		
+		user.setEmail("joao@silva.org");
+		user.setPassword("hunter2");
+		
+		ResponseEntity<String> reMock = new ResponseEntity<String>("{\"id\":1,\"created\":\"Nov 13, 2016 4:14:50 PM\"}", HttpStatus.ACCEPTED);
+		
+		UserDao userDaoMock = Mockito.mock(UserDao.class);
+		Mockito.when(userDaoMock.login(user)).thenReturn(reMock);
+		
+		ResponseEntity<String> re = userDaoMock.login(user);
+		
+		assertEquals(reMock.toString(), re.toString());
+	}
+	
+	@Test
+	public void tokenInexistente(){
+		
+		ResponseEntity<String> reMock = new ResponseEntity<String>("{\"mensagem\":\"Não autorizado\",\"codigo\":\"401\"}", HttpStatus.UNAUTHORIZED);
+		
+		UserDao userDaoMock = Mockito.mock(UserDao.class);
+		Mockito.when(userDaoMock.perfil(new Long(1), null)).thenReturn(reMock);
+		
+		ResponseEntity<String> re = userDaoMock.perfil(new Long(1), null);
+		
+		assertEquals(reMock.toString(), re.toString());
+	}
+	
+	@Test
+	public void tokenInvalido(){
+		
+		ResponseEntity<String> reMock = new ResponseEntity<String>("{\"mensagem\":\"Não autorizado\",\"codigo\":\"401\"}", HttpStatus.UNAUTHORIZED);
+		
+		UserDao userDaoMock = Mockito.mock(UserDao.class);
+		Mockito.when(userDaoMock.perfil(new Long(1), "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJudWxsOm51bGwiLCJpYXQiOjE0NzkxMzQ4ODd9.r9LOtfIY5XRC4Kpbs1S1psSQW5a4XiU11N8-3_nThi")).thenReturn(reMock);
+		
+		ResponseEntity<String> re = userDaoMock.perfil(new Long(1), "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJudWxsOm51bGwiLCJpYXQiOjE0NzkxMzQ4ODd9.r9LOtfIY5XRC4Kpbs1S1psSQW5a4XiU11N8-3_nThi");
+		
+		assertEquals(reMock.toString(), re.toString());
 	}
 }
